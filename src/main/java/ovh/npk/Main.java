@@ -12,31 +12,45 @@ public class Main {
 		final double[] alphas = {0.9};
 		final double[] gammas = {1.0};
 		final double[] epsilons = {0.9};
-		final int trials = 1000;
+		final int trials = 500;
 		final int runs = 10;
 		
 		// Load and initialize mazes
-		Map<Maze, Map<Coordinates, ? extends Number>> mazes = Map.of(
-			new Maze(new File("./data/easiest_maze.txt")), Map.of(
-				new Coordinates(9, 9), 10,
-				new Coordinates(9, 0), 5
-			),
-			new Maze(new File("./data/easy_maze.txt")), Map.of(
-				new Coordinates(24, 14), 10,
-				new Coordinates(0, 14), 5
-			)
+		List<NDMaze> mazes = List.of(
+				new NDMaze("./data/easiest_maze.txt"),
+				new NDMaze("./data/easy_maze.txt")
+		);
+		
+		Map<NDMaze, Map<IntTuple, ? extends Number>> rewards = Map.of(
+				mazes.get(0), Map.of(
+						new IntTuple(9, 9), 10,
+						new IntTuple(9, 0), 5
+				),
+				mazes.get(1), Map.of(
+						new IntTuple(24, 14), 10,
+						new IntTuple(0, 14), 5
+				)
 		);
 		
 		// Add rewards
-		mazes.forEach((m, rs) -> rs.forEach(m::setR));
+		rewards.forEach((m, rs) -> rs.forEach(m::setR));
+		
+		// Set starting positions
+		Map<NDMaze, IntTuple> start = Map.of(
+				mazes.get(0), new IntTuple(new int[mazes.get(0).dims()]),
+				mazes.get(1), new IntTuple(new int[mazes.get(1).dims()])
+		);
+		
+		// Add starting positions
+		start.forEach(NDMaze::setStart);
 		
 		// Grid search
 		int i = 0;
-		for (Maze m : mazes.keySet())
+//		for (NDMaze maze : mazes)
 			for (double alpha : alphas)
 				for (double gamma : gammas)
 					for (double epsilon : epsilons)
-						new Run(i++, alpha, gamma, epsilon, trials, runs, m.clone()).start();
+						new Run(i++, alpha, gamma, epsilon, trials, runs, mazes.get(0)).start();
 	}
 	
 	
@@ -44,43 +58,47 @@ public class Main {
 		
 		final double alpha, gamma, epsilon;
 		final int thread, trials, runs;
-		final Maze m;
+		final NDMaze maze;
 		
 		int[][] steps;
 		
-		Run(int thread, double alpha, double gamma, double epsilon, int trials, int runs, Maze m) {
+		Run(int thread, double alpha, double gamma, double epsilon, int trials, int runs, NDMaze maze) {
 			this.thread = thread;
 			this.alpha = alpha;
 			this.gamma = gamma;
 			this.epsilon = epsilon;
 			this.trials = trials;
 			this.runs = runs;
-			this.m = m;
+			this.maze = maze;
 			
 			steps = new int[runs][trials];
 		}
 		
 		@Override
 		public void run() {
-			Map<Coordinates, Integer> rewardVisits = new HashMap<>();
+			Map<IntTuple, Integer> rewardVisits = new HashMap<>();
 
 			for (int run = 0; run < runs; run++) {
-				Agent r = new Agent();
+				NDAgent r = new NDAgent(maze.getStart());
 				QLearning q = new QLearning(alpha, gamma);
 
 				NumberSpace epsilons = new NumberSpace(Math::sqrt, epsilon, 0.0, trials);
 				
-				Action a;
-				Coordinates c = r.coordinates();
+				int a;
+				IntTuple c = r.getC(), cNext = r.getC();
 				for (int trial = 0; r.getActions() < 30_000 && trial < trials;) {
-					a = EpsilonGreedy.getAction(c, m, q, epsilons.get(trial));
+					a = EpsilonGreedy.getAction(c, maze, q, epsilons.get(trial));
 					
-					q.updateQ(c, a, m, c = r.doAction(a));
+					r.doAction(a);
+					NDAgent.updateC(cNext, a);
+					q.updateQ(c, a, maze, cNext);
+					NDAgent.updateC(c, a);
 					
-					if (m.getR(c) > 0) {
-						rewardVisits.compute(c, (k, v) -> (v == null) ? 1 : v + 1);
+					if (maze.getR(c) > 0) {
+						rewardVisits.merge(c, 1, Integer::sum);
 						steps[run][trial++] = r.reset();
-						c = r.coordinates();
+						c = r.getC();
+						cNext = r.getC();
 					}
 				}
 			}
@@ -99,7 +117,8 @@ public class Main {
 				}
 			}
 
-			rewardVisits.forEach((r, v) -> System.out.println("(" + alpha + "," + gamma + "," + epsilon + ") " + r + ": " + v));
+			rewardVisits.forEach((r, v) -> System.out.format("(%.2f, %.2f, %.2f) %s: %d\n",
+					alpha, gamma, epsilon, Arrays.toString(r.data()), v));
 		}
 	}
 }

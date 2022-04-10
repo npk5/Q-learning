@@ -34,6 +34,10 @@ public class Main {
 				mazes.get(1), Map.of(
 						mazes.get(1).toS(new int[]{24, 14}), 10,
 						mazes.get(1).toS(new int[]{0, 14}), 5
+				),
+				mazes.get(2), Map.of(
+						mazes.get(2).toS(new int[]{2, 1, 0}), 10,
+						mazes.get(2).toS(new int[]{2, 0, 1}), 5
 				)
 		);
 		
@@ -43,11 +47,11 @@ public class Main {
 		
 		// Grid search
 		int i = 0;
-//		for (NDMaze maze : mazes)
+		for (NDMaze maze : mazes)
 			for (double alpha : alphas)
 				for (double gamma : gammas)
 					for (double epsilon : epsilons)
-						new Run(i++, alpha, gamma, epsilon, trials, runs, mazes.get(0)).start();
+						new Run(i++, alpha, gamma, epsilon, trials, runs, maze).start();
 	}
 	
 	
@@ -85,7 +89,6 @@ public class Main {
 					
 					agent.doAction(a);
 					int s_ = agent.getS();
-//					System.out.format("s: %s; s': %s\n", Arrays.toString(maze.toArr(s)), Arrays.toString(maze.toArr(s_)));
 					a_ = agent.getValidActions().stream()
 							.max(Comparator.comparingDouble(e -> learn.getQ(s_, e))).orElseThrow();
 					

@@ -7,7 +7,7 @@ import java.util.*;
 
 public class NDMaze {
 	
-	private final HashMap<Integer, List<Integer>> MEM = new HashMap<>();
+	private final HashMap<Integer, List<Integer>> VALID_ACTIONS = new HashMap<>();
 	
 	private final double[] R; // NaN if wall
 	private final int[] SHAPE;
@@ -24,21 +24,21 @@ public class NDMaze {
 		List<String> lines = Files.readAllLines(Path.of(path));
 		
 		// Dimensions
-		String[] line = lines.get(0).split("\\D");
-		int[] shape = new int[line.length];
-		int[] dims = new int[line.length + 1];
+		String[] split = lines.get(0).split("\\D");
+		int[] shape = new int[split.length];
+		int[] dims = new int[split.length + 1];
 		int length = dims[0] = 1;
-		for (int i = 0; i < line.length; i++)
-			dims[i + 1] = length *= shape[i] = Integer.parseInt(line[i]);
+		for (int i = 0; i < split.length; i++)
+			dims[i + 1] = length *= shape[i] = Integer.parseInt(split[i]);
 		
 		double[] r = new double[length];
 		
 		// Data
 		int size = 0;
-		for (int i = 1; i < lines.size(); i++) {
-			line = lines.get(i).trim().split("\\D");
-			for (String s : line)
-				r[size++] = s.equals("0") ? Double.NaN : -1;
+		for (int l = 1; l < lines.size(); l++) {
+			String line = lines.get(l).trim();
+			for (int c = 0; c < line.length(); c++)
+				r[size++] = Character.isSpaceChar(line.charAt(c)) ? Double.NaN : -1;
 		}
 		
 		return new NDMaze(r, shape, dims);
@@ -84,7 +84,7 @@ public class NDMaze {
 		if (isWall(s))
 			return Collections.emptyList();
 		
-		return MEM.computeIfAbsent(s, k -> {
+		return VALID_ACTIONS.computeIfAbsent(s, k -> {
 			List<Integer> validActions = new ArrayList<>();
 			
 			// For every dimension, check +/- possible

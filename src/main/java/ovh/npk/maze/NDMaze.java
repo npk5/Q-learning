@@ -36,7 +36,7 @@ public class NDMaze {
 		// Data
 		int size = 0;
 		for (int l = 1; l < lines.size(); l++) {
-			String line = lines.get(l).trim();
+			String line = lines.get(l);
 			for (int c = 0; c < line.length(); c++)
 				r[size++] = Character.isSpaceChar(line.charAt(c)) ? Double.NaN : -1;
 		}

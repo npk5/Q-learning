@@ -70,7 +70,7 @@ public class Solver extends Thread {
 		
 		File dir = new File("./output/");
 		if (dir.exists() || dir.mkdir()) {
-			try (BufferedWriter f = Files.newBufferedWriter(Path.of("./output/thread%s.out".formatted(thread)))) {
+			try (BufferedWriter f = Files.newBufferedWriter(Path.of("./output/thread%d.out".formatted(thread)))) {
 				f.write(trials + " " + runs + " " + alpha + " " + gamma + " " + epsilon + "\n");
 				for (int step : best) {
 					for (int i : maze.toArr(step))
